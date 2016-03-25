@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1458565647 source:c:\programming\kist\3dpaint\childwindow.cpp
+1458475881 source:c:\programming\kist\3dpaint\childwindow.cpp
 	"childwindow.h"
 	"header.h"
 	<windows.h>
@@ -26,7 +26,7 @@
 1458470727 c:\programming\kist\3dpaint\mainwindow.h
 	"childwindow.h"
 
-1458563207 source:c:\programming\kist\3dpaint\mainwindow.cpp
+1458473962 source:c:\programming\kist\3dpaint\mainwindow.cpp
 	<windows.h>
 	<commctrl.h>
 	"header.h"
