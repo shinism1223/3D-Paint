@@ -29,4 +29,3 @@ opengl32
 윈도우 깜빡임, 툴바 위로 window가 올라가는 문제 해결 .
 
 parsing + rendering 구현 ( childwindow.cpp )
-test
