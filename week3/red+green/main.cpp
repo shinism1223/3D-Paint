@@ -24,16 +24,16 @@ using namespace std;
 
 
 void DoDisplay();
-void Doinit();
 void DoMenu(int value);
 
+void DoMouse(int button, int state, int x, int y);
 void DoKeyboard(unsigned char key, int x, int y);
 void DoSpecial(int key, int x, int y);
-void DoMouse(int button, int state, int x, int y);
 
 bool bAlias;
 bool bHint;
 
+double scale=2;
 
 GLboolean bDepthTest = GL_TRUE;
 GLboolean bCullFace = GL_FALSE;
@@ -86,7 +86,7 @@ FILE*LoadFt(){
     return NULL;
 }
 #else
-FILE*LoadFt(char*Title,char*Filter,char*Extension="",char*Initial="")
+FILE*LoadFt(const char*Title,const char*Filter,const char*Extension="",const char*Initial="")
 {
     char file_path[1024],file_name[1024];
     strcpy(file_path,Initial);
@@ -147,10 +147,9 @@ int APIENTRY WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszCmdPa
 
     glutDisplayFunc(DoDisplay);
     glutCreateMenu(DoMenu);
+    glutMouseFunc(DoMouse);
     glutKeyboardFunc(DoKeyboard);
     glutSpecialFunc(DoSpecial);
-//    glutMouseFunc(DoMouse);
-
 
     glutAddMenuEntry("Depth Test ON",1);
     glutAddMenuEntry("Depth Test OFF",2);
@@ -158,18 +157,9 @@ int APIENTRY WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszCmdPa
     glutAddMenuEntry("Cull Face OFF",4);
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 
-    Doinit();
-
     glutMainLoop();
 
     return EXIT_SUCCESS;
-}
-
-void Doinit(void) {
-//    glClearColor(1.0, 1.0, 1.0, 0.5);
-//    glLoadIdentity(); //원상태로 복구
-//    glOrtho(-2, 2, -2, 2, 2, -2); // 카메라의 보는 시각 증가
-//    glGetFloatv(GL_MODELVIEW_MATRIX, saveMatrix);
 }
 
 void DisplayInit() {
@@ -215,10 +205,10 @@ void DisplayInit() {
 void DoDisplay()
 {
     DisplayInit();
-
+/*
     if(restart == true) {
         glLoadIdentity(); //원상태로 복구
-        glOrtho(-2, 2, -2, 2, 2, -2); // 카메라의 보는 시각 증가
+        glOrtho(-scale, scale, -scale, scale, -scale, scale); // 카메라의 보는 시각 증가
         //기본값은 다 1 입니다.
         //기존의 모델이 준 것이라고 생각하면 됩니다
         //opengl에 저장되어 있는 매트릭스 가져오는 것입니다
@@ -226,7 +216,9 @@ void DoDisplay()
         restart = false;
     }else{
         glLoadMatrixf(saveMatrix);
-    }
+    }*/
+    glLoadIdentity(); //원상태로 복구
+    glOrtho(-scale, scale, -scale, scale, -scale, scale); // 카메라의 보는 시각 증가
 
     glTranslatef(nx, ny, nz); //평행이동
     glRotatef(xAngle, 1.0f, 0.0f, 0.0f); //축회전
@@ -259,7 +251,7 @@ void DoDisplay()
     for(vector<Face>::iterator it=aFace.begin();it!=aFace.end();++it)
     {
         glVertex3f(aVertex[it->vertexNo[0]-1]);
-        for(int i=1;i<it->vertexNo.size();++i)
+        for(unsigned int i=1;i<it->vertexNo.size();++i)
         {
             glVertex3f(aVertex[it->vertexNo[i]-1]);
             glVertex3f(aVertex[it->vertexNo[i]-1]);
@@ -290,11 +282,26 @@ void DoMenu(int value)
     glutPostRedisplay();
 }
 
+void DoMouse(int button, int state, int x, int y)
+{
+    if(state==GLUT_UP)return;
+    switch(button)
+    {
+    case 3:
+        if(scale>0)scale=scale-0.1;
+        break;
+    case 4:
+        scale=scale+0.1;
+        break;
+    }
+    glutPostRedisplay();
+}
+
 void DoKeyboard(unsigned char key, int x, int y)
 {
     bool isNzChange = false;
-    xAngle = yAngle = zAngle = 0;
-    nx = ny = nz = 0; restart = false;
+    //xAngle = yAngle = zAngle = 0;
+    //nx = ny = nz = 0; restart = false;
     switch(key) {
         case 'a':yAngle += angleStep;break;
         case 'd':yAngle -= angleStep;break;
@@ -319,8 +326,8 @@ void DoKeyboard(unsigned char key, int x, int y)
 
 void DoSpecial(int key, int x, int y)
 {
-    xAngle = yAngle = zAngle = 0;
-    nx = ny = nz = 0; restart = false;
+    //xAngle = yAngle = zAngle = 0;
+    //nx = ny = nz = 0; restart = false;
     switch(key) {
         case GLUT_KEY_LEFT:
             nx -= translationStep;
