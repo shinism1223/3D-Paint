@@ -243,3 +243,27 @@
 	<_mingw.h>
 	<stddef.h>
 
+1458807049 source:d:\ku\grade 1 (2016)\kist 3d lab\3d-paint\week3\red+green\main.cpp
+	<GLUT/glut.h>
+	"tinyfiledialogs.h"
+	<windows.h>
+	<GL/glut.h>
+	<string.h>
+	<stdio.h>
+	<stdlib.h>
+	<vector>
+
+1426317328 d:\ku\grade 1 (2016)\kist 3d lab\3d-paint\week3\red+green\freeglut\include\gl\glut.h
+	"freeglut_std.h"
+
+1426317328 d:\ku\grade 1 (2016)\kist 3d lab\3d-paint\week3\red+green\freeglut\include\gl\freeglut_std.h
+	<windows.h>
+	<EGL/egl.h>
+	<GLES/gl.h>
+	<GLES2/gl2.h>
+	<OpenGL/gl.h>
+	<OpenGL/glu.h>
+	<GL/gl.h>
+	<GL/glu.h>
+	<stdlib.h>
+
