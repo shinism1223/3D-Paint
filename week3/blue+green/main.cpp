@@ -10,8 +10,7 @@ HINSTANCE g_hInst; // 프로세스의 handle을 저장할 변수
 
 int APIENTRY WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszCmdParam,int nCmdShow) // 메인함수.
 {
-
-//    ShowWindow(GetConsoleWindow(),SW_HIDE); // 콘솔창이 사라지도록  하는 함수이다.
+    ShowWindow(GetConsoleWindow(),SW_HIDE); // 콘솔창이 사라지도록  하는 함수이다.
 
     g_hInst=hInstance;
     MSG Message;
