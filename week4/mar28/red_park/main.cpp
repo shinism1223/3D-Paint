@@ -12,6 +12,8 @@
 #include <math.h>
 #include <vector>
 
+#define GLUT_BOTH_BUTTON 0x0010
+
 using namespace std;
 
 double scale=1,scalestep;
@@ -103,17 +105,19 @@ void DoMouse(int button, int state, int x, int y)
     switch(button)
     {
     case GLUT_LEFT_BUTTON:
-        ButtonState = GLUT_LEFT_BUTTON;
+        if(ButtonState==GLUT_RIGHT_BUTTON)ButtonState=GLUT_BOTH_BUTTON;
+        else ButtonState = GLUT_LEFT_BUTTON;
         X = x;
         Y = y;
         break;
     case GLUT_RIGHT_BUTTON:
-        ButtonState = GLUT_RIGHT_BUTTON;
+        if(ButtonState==GLUT_LEFT_BUTTON)ButtonState=GLUT_BOTH_BUTTON;
+        else ButtonState = GLUT_RIGHT_BUTTON;
         X = x;
         Y = y;
         break;
     case 3:
-        if(scale>scalestep)scale=scale-scalestep;
+        if(scale>scalestep)scale=scale-scalestep; // TODO: Zoom at that point
         break;
     case 4:
         scale=scale+scalestep;
@@ -124,13 +128,18 @@ void DoMouse(int button, int state, int x, int y)
 
 void DoMouseMove(int x, int y)
 {
-    if(ButtonState == GLUT_RIGHT_BUTTON) {
-        azimuth -= (x - X);
-        elevation -= (y - Y);
-    }
-    if(ButtonState == GLUT_LEFT_BUTTON) {
+    switch(ButtonState)
+    {
+    case GLUT_LEFT_BUTTON:
         moveX += (GLfloat)(x - X) / WindowWidth  * scale * 2;
         moveY -= (GLfloat)(y - Y) / WindowHeight * scale * 2;
+        break;
+    case GLUT_RIGHT_BUTTON:
+        azimuth -= (x - X);
+        elevation -= (y - Y);
+        break;
+    case GLUT_BOTH_BUTTON:
+        twist += (x - X);
     }
     X = x; Y = y;
     glutPostRedisplay();
