@@ -1,12 +1,3 @@
-//
-//  main.cpp
-//  Sample OpenGL Project
-//
-//  Created by KJBS2 on 3/15/16.
-//  Copyright (c) 2016 KJBS2. All rights reserved.
-//
-
-
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #include "tinyfiledialogs.h"
@@ -18,25 +9,17 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <vector>
 
 using namespace std;
 
+double scale=1,scalestep;
 
-void DoDisplay();
-void DoMenu(int value);
-
-void DoMouse(int button, int state, int x, int y);
-void DoKeyboard(unsigned char key, int x, int y);
-void DoSpecial(int key, int x, int y);
-
-bool bAlias;
-bool bHint;
-
-double scale=2;
-
-GLboolean bDepthTest = GL_TRUE;
-GLboolean bCullFace = GL_FALSE;
+const int   WindowWidth       = 600;
+const int   WindowHeight      = 600;
+const int   WindowPositionX   = 800;
+const int   WindowPositionY   = 000;
 
 struct Vertex
 {
@@ -64,6 +47,13 @@ bool restart = true;
 float translationStep = 0.1;
 
 float saveMatrix[16];
+
+GLfloat twist, elevation, azimuth;
+GLfloat roll, pitch, yaw;
+GLfloat step = 10;
+
+GLfloat moveX, moveY, moveZ=-2;
+GLfloat stepMove = 0.5;
 
 #ifdef __APPLE__
 FILE*LoadFt(){
@@ -97,69 +87,53 @@ FILE*LoadFt(const char*Title,const char*Filter,const char*Extension="",const cha
 } // 사용 예 : FILE*fl=LoadFt("KENNYC Load","KENNYC TEST(*.kct)\0*.kct\0KENNYC TEST2(*.kc2)\0*.kc2\0\0"); - 제목 : KENNYC Load, 파일 형식 : KENNYC TEST(*.kct)와 KENNYC TEST2(*.kc2)
 #endif
 
-inline void glVertex3f(Vertex &v){
+inline void glVertex3f(Vertex &v)
+{
     glVertex3f(v.x,v.y,v.z);
 }
 
-#ifdef __APPLE__
-int main(int argc, char *argv[]) {
-    FILE *fp = LoadFt();
-#else
-int APIENTRY WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszCmdParam,int nCmdShow) {
-    FILE *fp=LoadFt("Object File Load","Object File(*.obj)\0*.obj\0\0");
-#endif
-    if(!fp) return 0;
-
-    while(!feof(fp))
+int X, Y, ButtonState = -1;
+void DoMouse(int button, int state, int x, int y)
+{
+    if(state==GLUT_UP)
     {
-        char line[1024];
-        fgets(line,1024,fp);
-        if(!strncmp(line,"v ",2))
-        {
-            float x, y, z;
-            sscanf(line+2,"%f%f%f",&x,&y,&z);
-            aVertex.push_back(Vertex(x,y,z));
-        }
-        else if(!strncmp(line,"f ",2))
-        {
-            int t;
-            aFace.push_back(Face());
-            int pt=2;
-            while(1)
-            {
-                sscanf(line+pt,"%d",&t);
-                aFace.back().vertexNo.push_back(t);
-                if(!strstr(line+pt," "))break;
-                else pt=(int)(strstr(line+pt," ")-line)+1;
-            }
-        }
+        ButtonState = -1;
+        return;
     }
-    fclose(fp);
+    switch(button)
+    {
+    case GLUT_LEFT_BUTTON:
+        ButtonState = GLUT_LEFT_BUTTON;
+        X = x;
+        Y = y;
+        break;
+    case GLUT_RIGHT_BUTTON:
+        ButtonState = GLUT_RIGHT_BUTTON;
+        X = x;
+        Y = y;
+        break;
+    case 3:
+        if(scale>scalestep)scale=scale-scalestep;
+        break;
+    case 4:
+        scale=scale+scalestep;
+        break;
+    }
+    glutPostRedisplay();
+}
 
-#ifdef __APPLE__
-    glutInit(&argc, argv);
-#else
-    glutInit(&__argc,__argv);
-#endif
-    glutInitWindowSize(600, 600);
-    glutInitWindowPosition(800, 500);
-    glutCreateWindow("KJBS2");
-
-    glutDisplayFunc(DoDisplay);
-    glutCreateMenu(DoMenu);
-    glutMouseFunc(DoMouse);
-    glutKeyboardFunc(DoKeyboard);
-    glutSpecialFunc(DoSpecial);
-
-    glutAddMenuEntry("Depth Test ON",1);
-    glutAddMenuEntry("Depth Test OFF",2);
-    glutAddMenuEntry("Cull Face ON",3);
-    glutAddMenuEntry("Cull Face OFF",4);
-    glutAttachMenu(GLUT_RIGHT_BUTTON);
-
-    glutMainLoop();
-
-    return EXIT_SUCCESS;
+void DoMouseMove(int x, int y)
+{
+    if(ButtonState == GLUT_RIGHT_BUTTON) {
+        azimuth -= (x - X);
+        elevation -= (y - Y);
+    }
+    if(ButtonState == GLUT_LEFT_BUTTON) {
+        moveX += (GLfloat)(x - X) / WindowWidth  * scale * 2;
+        moveY -= (GLfloat)(y - Y) / WindowHeight * scale * 2;
+    }
+    X = x; Y = y;
+    glutPostRedisplay();
 }
 
 void DisplayInit() {
@@ -169,37 +143,25 @@ void DisplayInit() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // 안티 알리아싱 on, off
-    if (bAlias) {
-        glEnable(GL_POINT_SMOOTH);
-        glEnable(GL_LINE_SMOOTH);
-        glEnable(GL_POLYGON_SMOOTH);
-    } else {
-        glDisable(GL_POINT_SMOOTH);
-        glDisable(GL_LINE_SMOOTH);
-        glDisable(GL_POLYGON_SMOOTH);
-    }
+    glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POLYGON_SMOOTH);
 
     // 고품질 출력을 위한 힌트
-    glHint(GL_POINT_SMOOTH_HINT, bHint ? GL_NICEST:GL_FASTEST);
-    glHint(GL_LINE_SMOOTH_HINT, bHint ? GL_NICEST:GL_FASTEST);
-    glHint(GL_POLYGON_SMOOTH_HINT, bHint ? GL_NICEST:GL_FASTEST);
+    glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glShadeModel(GL_FLAT);
+}
 
-    if (bDepthTest) {
-        glEnable(GL_DEPTH_TEST);
-    } else {
-        glDisable(GL_DEPTH_TEST);
-    }
-
-    if (bCullFace) {
-        glEnable(GL_CULL_FACE);
-    } else {
-        glDisable(GL_CULL_FACE);
-    }
-
+void PolarView(GLfloat radius, GLfloat elevation, GLfloat azimuth, GLfloat twist) {
+//    glTranslatef(0.0, 0.0, -radius);
+    glTranslatef(moveX, moveY, moveZ);
+    glRotatef(-elevation,   1.0, 0.0, 0.0);
+    glRotatef(-azimuth,     0.0, 1.0, 0.0);
+    glRotatef(-twist,       0.0, 0.0, 1.0);
 }
 
 void DoDisplay()
@@ -220,6 +182,8 @@ void DoDisplay()
     glLoadIdentity(); //원상태로 복구
     glOrtho(-scale, scale, -scale, scale, -scale, scale); // 카메라의 보는 시각 증가
 
+    PolarView(+2, elevation, azimuth, twist);
+
     glTranslatef(nx, ny, nz); //평행이동
     glRotatef(xAngle, 1.0f, 0.0f, 0.0f); //축회전
     glRotatef(yAngle, 0.0f, 1.0f, 0.0f);
@@ -233,7 +197,7 @@ void DoDisplay()
     glVertex3f(0.0, 0.0, 0.0);
     glEnd();
 
-    glLineWidth(10);
+    glLineWidth(3);
     glBegin(GL_LINES);
 
 
@@ -261,40 +225,6 @@ void DoDisplay()
     glEnd();
 
     glFlush();
-}
-
-void DoMenu(int value)
-{
-    switch(value) {
-        case 1:
-            bDepthTest = GL_TRUE;
-            break;
-        case 2:
-            bDepthTest = GL_FALSE;
-            break;
-        case 3:
-            bCullFace = GL_TRUE;
-            break;
-        case 4:
-            bCullFace = GL_FALSE;
-            break;
-    }
-    glutPostRedisplay();
-}
-
-void DoMouse(int button, int state, int x, int y)
-{
-    if(state==GLUT_UP)return;
-    switch(button)
-    {
-    case 3:
-        if(scale>0)scale=scale-0.1;
-        break;
-    case 4:
-        scale=scale+0.1;
-        break;
-    }
-    glutPostRedisplay();
 }
 
 void DoKeyboard(unsigned char key, int x, int y)
@@ -346,4 +276,65 @@ void DoSpecial(int key, int x, int y)
     sprintf(info, "x=%.2f, y=%.2f z=%2.f", nx, ny, nz);
     glutSetWindowTitle(info);
     glutPostRedisplay();
+}
+
+#ifdef __APPLE__
+int main(int argc, char *argv[])
+{
+    FILE *fp=LoadFt();
+#else
+int APIENTRY WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszCmdParam,int nCmdShow)
+{
+    FILE *fp=LoadFt("Object File Load","Object File(*.obj)\0*.obj\0\0");
+#endif
+    if(!fp)return 0;
+
+    while(!feof(fp))
+    {
+        char line[1024];
+        fgets(line,1024,fp);
+        if(!strncmp(line,"v ",2))
+        {
+            float x,y,z;
+            sscanf(line+2,"%f%f%f",&x,&y,&z);
+            if(abs(x)>scale)scale=abs(x);
+            if(abs(y)>scale)scale=abs(y);
+            if(abs(z)>scale)scale=abs(z);
+            aVertex.push_back(Vertex(x,y,z));
+        }
+        else if(!strncmp(line,"f ",2))
+        {
+            int t;
+            aFace.push_back(Face());
+            int pt=2;
+            while(1)
+            {
+                sscanf(line+pt,"%d",&t);
+                aFace.back().vertexNo.push_back(t);
+                if(!strstr(line+pt," "))break;
+                else pt=(int)(strstr(line+pt," ")-line)+1;
+            }
+        }
+    }
+    scalestep=scale/20;
+    fclose(fp);
+
+#ifdef __APPLE__
+    glutInit(&argc, argv);
+#else
+    glutInit(&__argc,__argv);
+#endif
+    glutInitWindowSize      (WindowWidth    , WindowHeight   );
+    glutInitWindowPosition  (WindowPositionX, WindowPositionY);
+    glutCreateWindow("Obj File Viewer - Mar 30, RED_KENNY");
+
+    glutDisplayFunc(DoDisplay);
+    glutMouseFunc(DoMouse);
+    glutMotionFunc(DoMouseMove);
+    glutKeyboardFunc(DoKeyboard);
+    glutSpecialFunc(DoSpecial);
+
+    glutMainLoop();
+
+    return EXIT_SUCCESS;
 }
