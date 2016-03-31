@@ -1,0 +1,1 @@
+1. 지수님의 child window에 openGL로 그림 그리기.
