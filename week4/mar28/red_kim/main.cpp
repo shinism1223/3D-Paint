@@ -17,11 +17,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <math.h>
 
-const int WindowWidth       = 600;
-const int WindowHeight      = 600;
-const int WindowPositionX   = 800;
-const int WindowPositionY   = 000;
+const int   WindowWidth       = 600;
+const int   WindowHeight      = 600;
+const int   WindowPositionX   = 800;
+const int   WindowPositionY   = 000;
+const GLfloat XcoordinateMin    = -1.0;
+const GLfloat XcoordinateMax    = +1.0;
+const GLfloat YcoordinateMin    = -1.0;
+const GLfloat YcoordinateMax    = +1.0;
+const GLfloat ZcoordinateMin    = -1.0;
+const GLfloat ZcoordinateMax    = +15.0;
+
+bool changeProjection = false;
 
 using namespace std;
 
@@ -29,8 +38,12 @@ GLfloat twist, elevation, azimuth;
 GLfloat roll, pitch, yaw;
 GLfloat step = 10;
 
+GLfloat moveX, moveY, moveZ=-2;
+GLfloat stepMove = 0.5;
+
 void PolarView(GLfloat radius, GLfloat elevation, GLfloat azimuth, GLfloat twist) {
-    glTranslatef(0.0, 0.0, -radius);
+//    glTranslatef(0.0, 0.0, -radius);
+    glTranslatef(moveX, moveY, moveZ);
     glRotatef(-twist,       0.0, 0.0, 1.0);
     glRotatef(-elevation,   1.0, 0.0, 0.0);
     glRotatef(-azimuth,     0.0, 1.0, 0.0);
@@ -49,55 +62,62 @@ void DoKeyboard(unsigned char key, int x, int y) {
         case 'q': twist     -= step; break;
         case 'e': twist     += step; break;
         case 'z': azimuth = elevation = twist = 0; break;
+        case 'k': changeProjection = !changeProjection; break;
+        case 'n': moveZ += stepMove; break;
+        case 'm': moveZ -= stepMove; break;
     }
-    char info[128];
-    sprintf(info, "azimuth = %.1f, elevation = %.1f, twist = %.1f", azimuth, elevation, twist);
-    glutSetWindowTitle(info);
+    if(moveZ == -1.0) moveZ = -1.5;
     glutPostRedisplay();
 }
 void DoReshape(int w, int h) {
     glViewport(0, 0, (GLsizei) w, (GLsizei) h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-1.0, 1.0, -1.0, 1.0, -10.0, 10.0);
+    if(changeProjection)
+        glOrtho(XcoordinateMin, XcoordinateMax, YcoordinateMin, YcoordinateMax, ZcoordinateMin, ZcoordinateMax);
+    else
+        glFrustum(-1, 1, -1, 1, 1, 15);
 }
 
 int X, Y, ButtonState = -1;
-void DoMouse(int button, int state, int x, int y) {
-    if(button == GLUT_LEFT_BUTTON && state == 0) {
-        ButtonState = GLUT_LEFT_BUTTON;
-        X = x;
-        Y = y;
-        printf("MouseFunc\n");
-    }
+void DoMouseClick(int button, int state, int x, int y) {
     if(button == GLUT_RIGHT_BUTTON && state == 0) {
         ButtonState = GLUT_RIGHT_BUTTON;
-        X = x;
-        Y = y;
+        X = x; Y = y;
+    }
+    if(button == GLUT_LEFT_BUTTON && state == 0) {
+        ButtonState = GLUT_LEFT_BUTTON;
+        X = x; Y = y;
     }
     if(state == 1) {
         ButtonState = -1;
     }
 }
-void DoMouse2(int x, int y) {
-    if(ButtonState == GLUT_LEFT_BUTTON) {
-        azimuth -= (x - X);
-        elevation -= (y - Y);
-        X = x;
-        Y = y;
-        printf("MotionFunc\n");
+void DoMouseMoving(int x, int y) {
+    if(ButtonState == GLUT_RIGHT_BUTTON) {
+        azimuth     -= +(x - X) * cos(twist * M_PI / 180) + (y - Y) * sin(twist * M_PI / 180);
+        elevation   -= -(x - X) * sin(twist * M_PI / 180) + (y - Y) * cos(twist * M_PI / 180);
     }
+    if(ButtonState == GLUT_LEFT_BUTTON) {
+        moveX += (GLfloat)(x - X) / WindowWidth  * 2;
+        moveY -= (GLfloat)(y - Y) / WindowHeight * 2;
+    }
+    X = x; Y = y;
     glutPostRedisplay();
-//    printf("%d %d\n", x, y);
 }
 
 
 void DisplayInit() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
+
 }
 
 void InitLight() {
+//    glShadeModel(GL_FLAT);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_DEPTH_TEST);
+    
     GLfloat mat_diffuse[]   = {0.5, 0.4, 0.3, 1.0};
     GLfloat mat_specular[]  = {1.0, 1.0, 1.0, 1.0};
     GLfloat mat_ambient[]   = {0.5, 0.4, 0.3, 1.0};
@@ -106,25 +126,37 @@ void InitLight() {
     GLfloat light_diffuse[]   = {0.8, 0.8, 0.8, 1.0};
     GLfloat light_ambient[]   = {0.3, 0.3, 0.3, 1.0};
     GLfloat light_position[]  = {-3, 5, 3.0, 0.0};
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_DEPTH_TEST);
+    
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
     glLightfv(GL_LIGHT0, GL_DIFFUSE , light_diffuse );
     glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
     glLightfv(GL_LIGHT0, GL_AMBIENT , light_ambient );
+    
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
     glMaterialfv(GL_FRONT, GL_DIFFUSE  , mat_diffuse  );
     glMaterialfv(GL_FRONT, GL_SPECULAR , mat_specular );
     glMaterialfv(GL_FRONT, GL_AMBIENT  , mat_ambient  );
+    
 }
 
 void DoDisplay() {
     DisplayInit();
+    
     glLoadIdentity();
+    glLineWidth(3);
+    glBegin(GL_LINES);
+    glColor3f(1,1,1); // X축 Red
+    for(GLfloat i=-2.0; i<=2.0; i+=0.2) {
+        glVertex3f(+i, -1.0, -1.0);
+        glVertex3f(+i, -1.0, -50.0);
+        glVertex3f(+i, +1.0, -1.0);
+        glVertex3f(+i, +1.0, -50.0);
+    }
+    glEnd();
+
     PolarView(+2, elevation, azimuth, twist);
-//    gluLookAt(0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 1.0, 0.0);
     glutSolidTeapot(0.3);
     glFlush();
 }
@@ -137,7 +169,8 @@ int main(int argc, char *argv[]) {
 #else
     glutInit(&__argc,__argv);
 #endif
-
+    
+    
     glutInitWindowSize      (WindowWidth    , WindowHeight   );
     glutInitWindowPosition  (WindowPositionX, WindowPositionY);
     glutCreateWindow("KJBS2");
@@ -146,8 +179,8 @@ int main(int argc, char *argv[]) {
     glutDisplayFunc (DoDisplay );
     glutReshapeFunc (DoReshape );
     glutKeyboardFunc(DoKeyboard);
-    glutMouseFunc   (DoMouse   );
-    glutMotionFunc  (DoMouse2  );
+    glutMouseFunc   (DoMouseClick);
+    glutMotionFunc  (DoMouseMoving);
     glutMainLoop();
     
     return EXIT_SUCCESS;
