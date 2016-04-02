@@ -38,20 +38,20 @@ void DoDisplay()
 #ifdef _DEBUG
     glPointSize(20.0);
     glBegin(GL_POINTS);
-    glColor3f(1,1,0); // ø¯¡° Yellow
+    glColor3f(1,1,0); // ÏõêÏ†ê Yellow
     glVertex3f(0.0, 0.0, 0.0);
     glEnd();
 
     glLineWidth(3);
     glBegin(GL_LINES);
 
-    glColor3f(1,0,0); // X√‡ Red
+    glColor3f(1,0,0); // XÏ∂ï Red
     glVertex3f(0.0, 0.0, 0.0);
     glVertex3f(2.0, 0.0, 0.0);
-    glColor3f(0,1,0); // Y√‡ Green
+    glColor3f(0,1,0); // YÏ∂ï Green
     glVertex3f(0.0, 0.0, 0.0);
     glVertex3f(0.0, 2.0, 0.0);
-    glColor3f(0,0,1); // Z√‡ Blue
+    glColor3f(0,0,1); // ZÏ∂ï Blue
     glVertex3f(0.0, 0.0, 0.0);
     glVertex3f(0.0, 0.0, 2.0);
 #endif // _DEBUG
