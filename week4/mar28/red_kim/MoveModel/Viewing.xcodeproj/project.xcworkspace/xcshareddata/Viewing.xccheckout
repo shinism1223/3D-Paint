@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>C34436C0-2935-4B4F-800B-39C1408136F7</string>
+	<key>IDESourceControlProjectName</key>
+	<string>Viewing</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>88CF1839E355CDCB7F1C89CE27731CBFB9790917</key>
+		<string>https://github.com/KJBS2/OpenGl-in-KIST.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>MoveModel/Viewing.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>88CF1839E355CDCB7F1C89CE27731CBFB9790917</key>
+		<string>../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/KJBS2/OpenGl-in-KIST.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>88CF1839E355CDCB7F1C89CE27731CBFB9790917</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>88CF1839E355CDCB7F1C89CE27731CBFB9790917</string>
+			<key>IDESourceControlWCCName</key>
+			<string>Codes</string>
+		</dict>
+	</array>
+</dict>
+</plist>
