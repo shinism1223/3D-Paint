@@ -1,0 +1,6 @@
+1. mesh.h, mesh.cpp추가
+ - mesh 정보 삼각형들로 저장
+ - display() : OpenGL로 mesh 정보 display()
+2. parser.h, parser.cpp추가
+3. glcontext.h, glcontext.cpp추가
+ - OpenGL 사용을 가능하게 한다.
