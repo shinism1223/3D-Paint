@@ -10,7 +10,7 @@ void Mesh::display()
     //puts("i will draw");
     glClear(GL_COLOR_BUFFER_BIT);
 
-    float scaling = 1.0;
+    float scaling = 0.0001;
     glColor3f(1.0, 0.0, 0.0);
     for(const TRIANGLE& t : triangle){
         glBegin(GL_TRIANGLES);
