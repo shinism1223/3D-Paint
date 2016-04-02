@@ -3,15 +3,18 @@
 GLfloat translationX,translationY,translationZ,translationStep=0.1;
 GLfloat twist,elevation,azimuth,angleStep=2.0;
 GLfloat scale,scaleOriginal,scaleStep;
+GLfloat projectionMatrix[16];
 int prvX,prvY,buttonState;
 
 void DoDisplay()
 {
     char info[128];
-    sprintf(info,"tX=%.1f, tY=%.1f, tZ=%.1f, e=%.1f, a=%.1f, t=%.1f, s=%.1f",translationX,translationY,translationZ,elevation,azimuth,twist,scale);
+    sprintf(info,"x=%.1f, y=%.1f, z=%.1f, e=%.1f, a=%.1f, t=%.1f, s=%.1f",translationX,translationY,translationZ,elevation,azimuth,twist,scale);
     glutSetWindowTitle(info);
 
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0.5,0.5,0.5,1);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -24,51 +27,52 @@ void DoDisplay()
     glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
     glHint(GL_POLYGON_SMOOTH_HINT,GL_NICEST);
 
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glShadeModel(GL_SMOOTH);
 
+    glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-scale, scale, -scale, scale, -scale, scale);
+    glOrtho(-scale,scale,-scale,scale,-scale,scaleOriginal);
 
     glTranslatef(translationX,translationY,translationZ);
     glRotatef(elevation,1.0,0.0,0.0);
     glRotatef(azimuth,0.0,1.0,0.0);
     glRotatef(twist,0.0,0.0,1.0);
+    glGetFloatv(GL_PROJECTION_MATRIX,projectionMatrix);
+    //printf("%lf %lf %lf %lf\n%lf %lf %lf %lf\n%lf %lf %lf %lf\n%lf %lf %lf %lf\n-----\n",projectionMatrix[0],projectionMatrix[4],projectionMatrix[8],projectionMatrix[12],projectionMatrix[1],projectionMatrix[5],projectionMatrix[9],projectionMatrix[13],projectionMatrix[2],projectionMatrix[6],projectionMatrix[10],projectionMatrix[14],projectionMatrix[3],projectionMatrix[7],projectionMatrix[11],projectionMatrix[15]);
 
-#ifdef _DEBUG
-    glPointSize(20.0);
-    glBegin(GL_POINTS);
-    glColor3f(1,1,0); // 원점 Yellow
-    glVertex3f(0.0, 0.0, 0.0);
-    glEnd();
+    GLfloat lightAmbient[]={0.3,0.3,0.3,1};
+    GLfloat lightDiffuse[]={0.7,0.7,0.7,1};
+    GLfloat lightSpecular[]={1,1,1,1};
+    GLfloat lightPosition[]={0,0,-scaleOriginal,0};
+    GLfloat materialAmbient[]={0.7,0.7,0.7,1};
+    GLfloat materialSpecular[]={1,1,1,1};
 
-    glLineWidth(3);
-    glBegin(GL_LINES);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glLightfv(GL_LIGHT0,GL_AMBIENT,lightAmbient);
+    glLightfv(GL_LIGHT0,GL_DIFFUSE,lightDiffuse);
+    glLightfv(GL_LIGHT0,GL_SPECULAR,lightSpecular);
+    glLightfv(GL_LIGHT0,GL_POSITION,lightPosition);
 
-    glColor3f(1,0,0); // X축 Red
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(2.0, 0.0, 0.0);
-    glColor3f(0,1,0); // Y축 Green
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(0.0, 2.0, 0.0);
-    glColor3f(0,0,1); // Z축 Blue
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(0.0, 0.0, 2.0);
-#endif // _DEBUG
+    glMaterialfv(GL_FRONT,GL_AMBIENT_AND_DIFFUSE,materialAmbient);
+    glMaterialfv(GL_FRONT,GL_SPECULAR,materialSpecular);
+    glMaterialf(GL_FRONT,GL_SHININESS,128);
 
-    glLineWidth(3);
-    glBegin(GL_LINES);
-
-    glColor3f(1,1,1);
+    glBegin(GL_TRIANGLES);
     for(vector<Face>::iterator it=aFace.begin();it!=aFace.end();++it)
     {
-        glVertex3fv(aVertex[it->vertexNo[0]-1]);
-        for(unsigned int i=1;i<it->vertexNo.size();++i)
+        for(unsigned int i=1;i<it->vertexNo.size()-1;++i)
         {
+            Vertex ba=aVertex[it->vertexNo[i]-1]-aVertex[it->vertexNo[0]-1];
+            Vertex ca=aVertex[it->vertexNo[i+1]-1]-aVertex[it->vertexNo[0]-1];
+            Vertex n(ca.y*ba.z-ba.y*ca.z,ca.z*ba.x-ba.z*ca.x,ca.x*ba.y-ba.x*ca.y);
+            Vertex n2(-n.x*projectionMatrix[0]-n.y*projectionMatrix[4]-n.z*projectionMatrix[8],-n.x*projectionMatrix[1]-n.y*projectionMatrix[5]-n.z*projectionMatrix[9],-n.x*projectionMatrix[2]-n.y*projectionMatrix[6]-n.z*projectionMatrix[10]);
+            n2=n2/n2.getLength();
+            glNormal3f(n2.x,n2.y,n2.z);
+            glVertex3fv(aVertex[it->vertexNo[0]-1]);
             glVertex3fv(aVertex[it->vertexNo[i]-1]);
-            glVertex3fv(aVertex[it->vertexNo[i]-1]);
+            glVertex3fv(aVertex[it->vertexNo[i+1]-1]);
         }
-        glVertex3fv(aVertex[it->vertexNo[0]-1]);
     }
     glEnd();
 
@@ -171,21 +175,21 @@ void DoKeyboard(unsigned char key,int x,int y)
     glutPostRedisplay();
 }
 
-void DoSpecial(int key, int x, int y)
+void DoSpecial(int key,int x,int y)
 {
     switch(key)
     {
     case GLUT_KEY_LEFT:
-        translationX -= translationStep;
+        translationX=translationX-translationStep;
         break;
     case GLUT_KEY_RIGHT:
-        translationX += translationStep;
+        translationX=translationX+translationStep;
         break;
     case GLUT_KEY_UP:
-        translationY += translationStep;
+        translationY=translationY+translationStep;
         break;
     case GLUT_KEY_DOWN:
-        translationY -= translationStep;
+        translationY=translationY-translationStep;
         break;
     }
     glutPostRedisplay();
@@ -225,13 +229,13 @@ int main(int argc,char *argv[])
     }
     fclose(fp);
 
+    scaleOriginal=scaleOriginal*sqrt(3);
     scale=scaleOriginal;
     scaleStep=scale/20;
 
     glutInit(&argc,argv);
     glutInitWindowSize(WindowWidth,WindowHeight);
-    glutInitWindowPosition(WindowPositionX,WindowPositionY);
-    glutCreateWindow("Obj File Viewer - April 2, RED_KENNY");
+    glutCreateWindow("Obj File Viewer - April 3, RED_KENNY");
 
     glutDisplayFunc(DoDisplay);
     glutMouseFunc(DoMouse);

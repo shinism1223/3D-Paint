@@ -25,11 +25,31 @@ using namespace std;
 
 struct Vertex
 {
-    Vertex(float x,float y,float z)
+    Vertex(float x=0,float y=0,float z=0)
     {
         this->x=x;
         this->y=y;
         this->z=z;
+    }
+    Vertex operator-(Vertex v)
+    {
+        Vertex r;
+        r.x=x-v.x;
+        r.y=y-v.y;
+        r.z=z-v.z;
+        return r;
+    }
+    Vertex operator/(GLfloat d)
+    {
+        Vertex r;
+        r.x=x/d;
+        r.y=y/d;
+        r.z=z/d;
+        return r;
+    }
+    GLfloat getLength()
+    {
+        return sqrt(x*x+y*y+z*z);
     }
     float x,y,z;
 };
@@ -44,8 +64,6 @@ vector<Face> aFace;
 
 const int WindowWidth=600;
 const int WindowHeight=600;
-const int WindowPositionX=800;
-const int WindowPositionY=0;
 
 inline void glVertex3fv(Vertex &v)
 {
