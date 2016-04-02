@@ -1,11 +1,3 @@
-//
-//  main.cpp
-//  Viewing
-//
-//  Created by KJBS2 on 3/26/16.
-//  Copyright (c) 2016 KJBS2. All rights reserved.
-//
-
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
@@ -48,7 +40,7 @@ GLfloat stepMove = 0.5;
 
 void PolarView(GLfloat radius, GLfloat elevation, GLfloat azimuth, GLfloat twist)
 {
-//    glTranslatef(0.0, 0.0, -radius);
+    //    glTranslatef(0.0, 0.0, -radius);
     glTranslatef(moveX, moveY, moveZ);
     glRotatef(-twist,       0.0, 0.0, 1.0);
     glRotatef(-elevation,   1.0, 0.0, 0.0);
@@ -145,7 +137,7 @@ void DisplayInit()
 
 void InitLight()
 {
-//    glShadeModel(GL_FLAT);
+    //    glShadeModel(GL_FLAT);
     glShadeModel(GL_SMOOTH);
     glEnable(GL_DEPTH_TEST);
     
@@ -188,7 +180,7 @@ void DoDisplay()
         glVertex3f(+i, +1.0, -50.0);
     }
     glEnd();
-
+    
     PolarView(+2, elevation, azimuth, twist);
     glutSolidTeapot(0.3);
     glFlush();
@@ -220,5 +212,5 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-    
-    
+
+
