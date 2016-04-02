@@ -1,2 +1,3 @@
 *.layout
 *.depend
+.DS_Store
