@@ -11,18 +11,34 @@
 
 using namespace std;
 
+bool bEnableOpenGL = false;
 
 // child window message call back function
 LRESULT CALLBACK ChildWndProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lParam)
 {
-    Mesh *mesh = window_main.get_child_window()->getMesh();
-
-    // OpenGL display function in mesh object
-    mesh->display();
-
     PAINTSTRUCT ps;
     switch(iMessage)
     {
+    case WM_PAINT:
+
+        break;
+
+    // TODO: Mouse click event message receiving
+    // TODO: Mouse moving event message receiving
+    // TODO: Keyboard key-down event message receiving
+
+    default:
+
+    // TODO: should move display() from here to appropriate places in this callback function
+        // Check whether ready to draw mesh
+        if(bEnableOpenGL){
+        // Get mesh data
+        Mesh *mesh = window_main.get_child_window()->getMesh();
+
+        // Display mesh data
+        mesh->display();
+        }
+        break;
     }
     return (DefWindowProc(hWnd,iMessage,wParam,lParam));
 }
@@ -32,19 +48,24 @@ LRESULT CALLBACK ChildWndProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lPara
 ChildWindow::ChildWindow(OPENFILENAME _OFN)
 {
     OFN=_OFN;
+
     set_window();
 
-    //파싱해서 정보들을 저장하는 함수 호출 해야되는 부분
-    // set .obj file path in parser
+    // Set .obj file path in parser object
     parser.setPath(OFN.lpstrFile);
-    // set mesh
+    // Set mesh
     parser.setMesh(&mesh);
-    // parse .obj file to mesh data format
+    // Parse .obj file to mesh data format
     parser.parse();
 
+    // Device Context, Render Context Initialization
     glContext.init(hwnd);
 
+    // Initialize OpenGL settings
     initGL();
+
+    // From here, you can use openGL.
+    bEnableOpenGL = true;
 }
 
 
