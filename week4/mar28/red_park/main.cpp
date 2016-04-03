@@ -1,15 +1,98 @@
 #include"main.h"
 
-GLfloat translationX,translationY,translationZ,translationStep=0.1;
+GLfloat translationX,translationY,translationZ,translationStep=0.05;
 GLfloat twist,elevation,azimuth,angleStep=2.0;
-GLfloat scale,scaleOriginal,scaleStep;
+GLfloat scale,size,scaleStep;
 GLfloat projectionMatrix[16];
 int prvX,prvY,buttonState;
+char file[260],info[260];
+
+void initialize()
+{
+    translationX=0;
+    translationY=0;
+    translationZ=0;
+    elevation=0;
+    azimuth=0;
+    twist=0;
+    scale=1;
+    scaleStep=0.05;
+}
+
+void DoLoad()
+{
+    int i;
+#ifdef _DEBUG
+    const char *ret="../../sample/al.obj";
+#else
+    const char *ret=tinyfd_openFileDialog(dialogTitle,NULL,1,filterPatterns,filterDescription,0);
+#endif
+    if(ret==NULL)return;
+    for(i=strlen(ret)-1;i>=0;--i)if(ret[i]=='/'||ret[i]=='\\')break;
+    strcpy(file,ret+i+1);
+    FILE*fp=fopen(ret,"r");
+    if(fp==NULL)return;
+    initialize();
+    aVertex.clear();
+    aFace.clear();
+    size=0;
+    while(!feof(fp))
+    {
+        char line[1024];
+        fgets(line,1024,fp);
+        if(!strncmp(line,"v ",2))
+        {
+            Vector3 v;
+            sscanf(line+2,"%f%f%f",&v.x,&v.y,&v.z);
+            aVertex.push_back(v);
+            if(v.getNorm()>size)size=v.getNorm();
+        }
+        else if(!strncmp(line,"vn ",3))
+        {
+            Vector3 v;
+            sscanf(line+2,"%f%f%f",&v.x,&v.y,&v.z);
+            aNormal.push_back(-v);
+        }
+        else if(!strncmp(line,"f ",2))
+        {
+            int t;
+            Vector3 n;
+            aFace.push_back(Face());
+            char *pt=line+2;
+            while(1)
+            {
+                sscanf(pt,"%d",&t);
+                aFace.back().vertexNo.push_back(t);
+                if(strstr(pt,"/"))
+                {
+                    pt=strstr(pt,"/")+1;
+                    if(strstr(pt,"/")&&strstr(pt,"/")<strstr(pt," "))
+                    {
+                        pt=strstr(pt,"/")+1;
+                        sscanf(pt,"%d",&t);
+                        n=aNormal[t-1];
+                    }
+                }
+                aFace.back().normal.push_back(n);
+                if(strstr(pt," "))pt=strstr(pt," ")+1;
+                else break;
+                for(i='0';i<='9';++i)
+                {
+                    char digit[2];
+                    digit[0]=i;
+                    digit[1]=0;
+                    if(strstr(pt,digit))break;
+                }
+                if(i>'9')break;
+            }
+        }
+    }
+    fclose(fp);
+}
 
 void DoDisplay()
 {
-    char info[128];
-    sprintf(info,"x=%.1f, y=%.1f, z=%.1f, e=%.1f, a=%.1f, t=%.1f, s=%.1f",translationX,translationY,translationZ,elevation,azimuth,twist,scale);
+    sprintf(info,"\"%s\" - x=%.1f, y=%.1f, z=%.1f, e=%.1f, a=%.1f, t=%.1f, s=%.1f",file,translationX,translationY,translationZ,elevation,azimuth,twist,scale);
     glutSetWindowTitle(info);
 
     glClearColor(0.5,0.5,0.5,1);
@@ -31,19 +114,19 @@ void DoDisplay()
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-scale,scale,-scale,scale,-scale,scaleOriginal);
+    glOrtho(-size,size,-size,size,-size*scale,size*scale);
 
+    glScalef(scale,scale,scale);
     glTranslatef(translationX,translationY,translationZ);
+    glRotatef(twist,0.0,0.0,1.0);
     glRotatef(elevation,1.0,0.0,0.0);
     glRotatef(azimuth,0.0,1.0,0.0);
-    glRotatef(twist,0.0,0.0,1.0);
     glGetFloatv(GL_PROJECTION_MATRIX,projectionMatrix);
-    //printf("%lf %lf %lf %lf\n%lf %lf %lf %lf\n%lf %lf %lf %lf\n%lf %lf %lf %lf\n-----\n",projectionMatrix[0],projectionMatrix[4],projectionMatrix[8],projectionMatrix[12],projectionMatrix[1],projectionMatrix[5],projectionMatrix[9],projectionMatrix[13],projectionMatrix[2],projectionMatrix[6],projectionMatrix[10],projectionMatrix[14],projectionMatrix[3],projectionMatrix[7],projectionMatrix[11],projectionMatrix[15]);
 
-    GLfloat lightAmbient[]={0.3,0.3,0.3,1};
+    GLfloat lightAmbient[]={0.5,0.5,0.5,1};
     GLfloat lightDiffuse[]={0.7,0.7,0.7,1};
     GLfloat lightSpecular[]={1,1,1,1};
-    GLfloat lightPosition[]={0,0,-scaleOriginal,0};
+    GLfloat lightPosition[]={0,0,-size,0};
     GLfloat materialAmbient[]={0.7,0.7,0.7,1};
     GLfloat materialSpecular[]={1,1,1,1};
 
@@ -53,30 +136,39 @@ void DoDisplay()
     glLightfv(GL_LIGHT0,GL_DIFFUSE,lightDiffuse);
     glLightfv(GL_LIGHT0,GL_SPECULAR,lightSpecular);
     glLightfv(GL_LIGHT0,GL_POSITION,lightPosition);
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE,GL_TRUE);
 
     glMaterialfv(GL_FRONT,GL_AMBIENT_AND_DIFFUSE,materialAmbient);
     glMaterialfv(GL_FRONT,GL_SPECULAR,materialSpecular);
     glMaterialf(GL_FRONT,GL_SHININESS,128);
 
-    glBegin(GL_TRIANGLES);
     for(vector<Face>::iterator it=aFace.begin();it!=aFace.end();++it)
     {
-        for(unsigned int i=1;i<it->vertexNo.size()-1;++i)
+        glBegin(GL_POLYGON);
+        if(it->vertexNo.size()<3)continue;
+        for(unsigned int i=0;i<it->vertexNo.size();++i)
         {
-            Vertex ba=aVertex[it->vertexNo[i]-1]-aVertex[it->vertexNo[0]-1];
-            Vertex ca=aVertex[it->vertexNo[i+1]-1]-aVertex[it->vertexNo[0]-1];
-            Vertex n(ca.y*ba.z-ba.y*ca.z,ca.z*ba.x-ba.z*ca.x,ca.x*ba.y-ba.x*ca.y);
-            Vertex n2(-n.x*projectionMatrix[0]-n.y*projectionMatrix[4]-n.z*projectionMatrix[8],-n.x*projectionMatrix[1]-n.y*projectionMatrix[5]-n.z*projectionMatrix[9],-n.x*projectionMatrix[2]-n.y*projectionMatrix[6]-n.z*projectionMatrix[10]);
-            n2=n2/n2.getLength();
+            if(it->normal[i].x==0&&it->normal[i].y==0&&it->normal[i].z==0)
+            {
+                Vector3 ba=aVertex[it->vertexNo[1]-1]-aVertex[it->vertexNo[0]-1];
+                Vector3 ca=aVertex[it->vertexNo[2]-1]-aVertex[it->vertexNo[0]-1];
+                Vector3 n(ca.y*ba.z-ba.y*ca.z,ca.z*ba.x-ba.z*ca.x,ca.x*ba.y-ba.x*ca.y);
+                it->normal[i]=n;
+            }
+            Vector3 n2(-it->normal[i].x*projectionMatrix[0]-it->normal[i].y*projectionMatrix[4]-it->normal[i].z*projectionMatrix[8],-it->normal[i].x*projectionMatrix[1]-it->normal[i].y*projectionMatrix[5]-it->normal[i].z*projectionMatrix[9],-it->normal[i].x*projectionMatrix[2]-it->normal[i].y*projectionMatrix[6]-it->normal[i].z*projectionMatrix[10]);
+            n2=n2/n2.getNorm();
             glNormal3f(n2.x,n2.y,n2.z);
-            glVertex3fv(aVertex[it->vertexNo[0]-1]);
             glVertex3fv(aVertex[it->vertexNo[i]-1]);
-            glVertex3fv(aVertex[it->vertexNo[i+1]-1]);
         }
+        glEnd();
     }
-    glEnd();
 
     glFlush();
+}
+
+void DoReshape(int w,int h)
+{
+    // TODO
 }
 
 void DoMouse(int button,int state,int x,int y)
@@ -93,10 +185,10 @@ void DoMouse(int button,int state,int x,int y)
             prvY=y;
             break;
         case KIST_SCROLL_UP:
-            if(scale>scaleStep)scale=scale-scaleStep; // TODO: Zoom at that point
+            scale=scale*(1+scaleStep);
             break;
         case KIST_SCROLL_DOWN:
-            scale=scale+scaleStep;
+            scale=scale/(1+scaleStep);
             break;
         }
     }
@@ -118,12 +210,12 @@ void DoMouseMove(int x,int y)
     switch(buttonState)
     {
     case KIST_LEFT_BUTTON:
-        translationX=translationX+(x-prvX)*2.0*scale/WindowWidth;
-        translationY=translationY-(y-prvY)*2.0*scale/WindowHeight;
+        translationX=translationX+(x-prvX)*2.0*size/scale/WindowWidth;
+        translationY=translationY-(y-prvY)*2.0*size/scale/WindowHeight;
         break;
     case KIST_RIGHT_BUTTON:
-        azimuth=azimuth+(x-prvX)*cos(twist*M_PI/180)+(y-prvY)*sin(twist*M_PI/180);
-        elevation=elevation-(x-prvX)*sin(twist*M_PI/180)+(y-prvY)*cos(twist*M_PI/180);
+        azimuth=azimuth+(x-prvX)*cos(twist*M_PI/180)-(y-prvY)*sin(twist*M_PI/180);
+        elevation=elevation+(x-prvX)*sin(twist*M_PI/180)+(y-prvY)*cos(twist*M_PI/180);
         break;
     case KIST_BOTH_BUTTON:
         twist=twist+(atan2(-y+WindowHeight/2,x-WindowWidth/2)-atan2(-prvY+WindowHeight/2,prvX-WindowWidth/2))*180/M_PI;
@@ -157,19 +249,16 @@ void DoKeyboard(unsigned char key,int x,int y)
         twist=twist-angleStep;
         break;
     case 'x':
-        translationZ=translationZ-translationStep;
+        translationZ=translationZ-translationStep*size;
         break;
     case 'c':
-        translationZ=translationZ+translationStep;
+        translationZ=translationZ+translationStep*size;
         break;
     case 'z':
-        translationX=0;
-        translationY=0;
-        translationZ=0;
-        elevation=0;
-        azimuth=0;
-        twist=0;
-        scale=scaleOriginal;
+        initialize();
+        break;
+    case ' ':
+        DoLoad();
         break;
     }
     glutPostRedisplay();
@@ -180,16 +269,16 @@ void DoSpecial(int key,int x,int y)
     switch(key)
     {
     case GLUT_KEY_LEFT:
-        translationX=translationX-translationStep;
+        translationX=translationX-translationStep*size;
         break;
     case GLUT_KEY_RIGHT:
-        translationX=translationX+translationStep;
+        translationX=translationX+translationStep*size;
         break;
     case GLUT_KEY_UP:
-        translationY=translationY+translationStep;
+        translationY=translationY+translationStep*size;
         break;
     case GLUT_KEY_DOWN:
-        translationY=translationY-translationStep;
+        translationY=translationY-translationStep*size;
         break;
     }
     glutPostRedisplay();
@@ -197,47 +286,18 @@ void DoSpecial(int key,int x,int y)
 
 int main(int argc,char *argv[])
 {
-    FILE *fp;
-    const char *filterPatterns[]={"*.obj"};
-    if((fp=fopen(tinyfd_openFileDialog("Load Obj File","",1,filterPatterns,"Object files",0),"r"))==NULL)return 0;
-    while(!feof(fp))
-    {
-        char line[1024];
-        fgets(line,1024,fp);
-        if(!strncmp(line,"v ",2))
-        {
-            float x,y,z;
-            sscanf(line+2,"%f%f%f",&x,&y,&z);
-            if(fabs(x)>scaleOriginal)scaleOriginal=fabs(x);
-            if(fabs(y)>scaleOriginal)scaleOriginal=fabs(y);
-            if(fabs(z)>scaleOriginal)scaleOriginal=fabs(z);
-            aVertex.push_back(Vertex(x,y,z));
-        }
-        else if(!strncmp(line,"f ",2))
-        {
-            int t;
-            aFace.push_back(Face());
-            int pt=2;
-            while(1)
-            {
-                sscanf(line+pt,"%d",&t);
-                aFace.back().vertexNo.push_back(t);
-                if(!strstr(line+pt," "))break;
-                else pt=(int)(strstr(line+pt," ")-line)+1;
-            }
-        }
-    }
-    fclose(fp);
+#if !defined(_DEBUG) && !defined(__APPLE__)
+    FreeConsole();
+#endif
 
-    scaleOriginal=scaleOriginal*sqrt(3);
-    scale=scaleOriginal;
-    scaleStep=scale/20;
+    DoLoad();
 
     glutInit(&argc,argv);
     glutInitWindowSize(WindowWidth,WindowHeight);
-    glutCreateWindow("Obj File Viewer - April 3, RED_KENNY");
+    glutCreateWindow(NULL);
 
     glutDisplayFunc(DoDisplay);
+    glutReshapeFunc(DoReshape);
     glutMouseFunc(DoMouse);
     glutMotionFunc(DoMouseMove);
     glutKeyboardFunc(DoKeyboard);
