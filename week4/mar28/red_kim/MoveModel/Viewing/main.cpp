@@ -9,7 +9,6 @@
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
-#include <windows.h>
 #include <GL/glut.h>
 #endif
 
@@ -118,11 +117,16 @@ void DoMouseClick(int button, int state, int x, int y)
 }
 void DoMouseMoving(int x, int y)
 {
+    GLfloat restoreElevation = elevation;
     switch(ButtonState)
     {
         case KIST_RIGHT_BUTTON:
             azimuth     -= +(x - X) * cos(twist * M_PI / 180) + (y - Y) * sin(twist * M_PI / 180);
             elevation   -= -(x - X) * sin(twist * M_PI / 180) + (y - Y) * cos(twist * M_PI / 180);
+            if(azimuth > +180) azimuth -= +360;
+            if(azimuth < -180) azimuth += +360;
+            if(elevation > +90) elevation = restoreElevation;
+            if(elevation < -90) elevation = restoreElevation;
             break;
         case KIST_LEFT_BUTTON:
             moveX += (GLfloat)(x - X) / WindowWidth  * 2;
@@ -174,6 +178,10 @@ void InitLight()
 
 void DoDisplay()
 {
+    char info[128];
+    sprintf(info,"e=%.1f, a=%.1f, t=%.1f",elevation,azimuth,twist);
+    glutSetWindowTitle(info);
+
     DisplayInit();
     
     glLoadIdentity();
