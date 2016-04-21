@@ -1,45 +1,3 @@
-<<<<<<< HEAD
-//
-//  main.cpp
-//  Viewing
-//
-//  Created by KJBS2 on 3/26/16.
-//  Copyright (c) 2016 KJBS2. All rights reserved.
-//
-
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
-#include <windows.h>
-#include <GL/glut.h>
-#endif
-
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
-#include <math.h>
-
-const int   WindowWidth       = 600;
-const int   WindowHeight      = 600;
-const int   WindowPositionX   = 800;
-const int   WindowPositionY   = 000;
-const GLfloat XcoordinateMin    = -1.0;
-const GLfloat XcoordinateMax    = +1.0;
-const GLfloat YcoordinateMin    = -1.0;
-const GLfloat YcoordinateMax    = +1.0;
-const GLfloat ZcoordinateMin    = -1.0;
-const GLfloat ZcoordinateMax    = +15.0;
-
-bool changeProjection = false;
-
-#define KIST_BOTH_BUTTON  0x0003
-#define KIST_LEFT_BUTTON  0x0001
-#define KIST_RIGHT_BUTTON 0x0002
-
-
-using namespace std;
-=======
 #include"main.h"
 
 GLfloat translationX,translationY,translationZ,translationStep=0.05;
@@ -48,6 +6,13 @@ GLfloat scale,size,scaleStep;
 GLfloat projectionMatrix[16];
 int prvX,prvY,buttonState;
 char file[260],info[260];
+
+map <int, bool> isPress;
+int mode = -1;
+
+bool debug = true;
+bool showGridline = true;
+int plus = 0;
 
 void initialize()
 {
@@ -59,18 +24,20 @@ void initialize()
     twist=0;
     scale=1;
     scaleStep=0.05;
+    
+    Camera = CAMERA();
+    
+    prvX = -1; prvY = -1;
+
+    mode = KIST_CAMERA_MODE;
 }
 
 void DoLoad()
 {
     int i;
-#ifdef _DEBUG
-    const char *ret="../../sample/al.obj";
-#else
     const char *ret=tinyfd_openFileDialog(dialogTitle,NULL,1,filterPatterns,filterDescription,0);
-#endif
     if(ret==NULL)return;
-    for(i=strlen(ret)-1;i>=0;--i)if(ret[i]=='/'||ret[i]=='\\')break;
+    for(i=(int)strlen(ret)-1;i>=0;--i)if(ret[i]=='/'||ret[i]=='\\')break;
     strcpy(file,ret+i+1);
     FILE*fp=fopen(ret,"r");
     if(fp==NULL)return;
@@ -132,47 +99,64 @@ void DoLoad()
     fclose(fp);
 }
 
-void DoDisplay()
+void DoIdle() {
+    if(isPress['a'] || isPress['A'])
+        Camera.position = Camera.position - Camera.xAxis *(float)0.05;
+    if(isPress['d'] || isPress['D'])
+        Camera.position = Camera.position + Camera.xAxis *(float)0.05;
+    if(isPress['w'] || isPress['W'])
+        Camera.position = Camera.position + Camera.normal*(float)0.05;
+    if(isPress['s'] || isPress['S'])
+        Camera.position = Camera.position - Camera.normal*(float)0.05;
+    glutPostRedisplay();
+}
+
+void DoDisplayInit()
 {
     sprintf(info,"\"%s\" - x=%.1f, y=%.1f, z=%.1f, e=%.1f, a=%.1f, t=%.1f, s=%.1f",file,translationX,translationY,translationZ,elevation,azimuth,twist,scale);
     glutSetWindowTitle(info);
+    
+    glClearColor(0,0,0,1); // Background Color
 
-    glClearColor(0.5,0.5,0.5,1);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-
+    
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
->>>>>>> 1fb0edd54321e4bb67f2a171c309f868fc167f8a
-
+    
     glEnable(GL_POINT_SMOOTH);
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_POLYGON_SMOOTH);
-
+    
     glHint(GL_POINT_SMOOTH_HINT,GL_NICEST);
     glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
     glHint(GL_POLYGON_SMOOTH_HINT,GL_NICEST);
-
+    
     glShadeModel(GL_SMOOTH);
-
+}
+void DoDisplayMatrix()
+{
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-size,size,-size,size,-size*scale,size*scale);
-
+//    glOrtho(-size,size,-size,size,-size*scale,size*scale);
+    glFrustum(-1, 1, -1, 1, 1, 50);
+    gluLookAt(Camera.position, Camera.position + Camera.normal, Camera.yAxis);
     glScalef(scale,scale,scale);
     glTranslatef(translationX,translationY,translationZ);
     glRotatef(twist,0.0,0.0,1.0);
     glRotatef(elevation,1.0,0.0,0.0);
     glRotatef(azimuth,0.0,1.0,0.0);
-    glGetFloatv(GL_PROJECTION_MATRIX,projectionMatrix);
-
+    
+}
+void DoDisplayLightOn()
+{
     GLfloat lightAmbient[]={0.5,0.5,0.5,1};
     GLfloat lightDiffuse[]={0.7,0.7,0.7,1};
     GLfloat lightSpecular[]={1,1,1,1};
     GLfloat lightPosition[]={0,0,-size,0};
     GLfloat materialAmbient[]={0.7,0.7,0.7,1};
     GLfloat materialSpecular[]={1,1,1,1};
-
+    
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glLightfv(GL_LIGHT0,GL_AMBIENT,lightAmbient);
@@ -180,81 +164,30 @@ void DoDisplay()
     glLightfv(GL_LIGHT0,GL_SPECULAR,lightSpecular);
     glLightfv(GL_LIGHT0,GL_POSITION,lightPosition);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE,GL_TRUE);
-
+    
     glMaterialfv(GL_FRONT,GL_AMBIENT_AND_DIFFUSE,materialAmbient);
     glMaterialfv(GL_FRONT,GL_SPECULAR,materialSpecular);
     glMaterialf(GL_FRONT,GL_SHININESS,128);
-
-<<<<<<< HEAD
-void PolarView(GLfloat radius, GLfloat elevation, GLfloat azimuth, GLfloat twist)
-{
-//    glTranslatef(0.0, 0.0, -radius);
-    glTranslatef(moveX, moveY, moveZ);
-    glRotatef(-twist,       0.0, 0.0, 1.0);
-    glRotatef(-elevation,   1.0, 0.0, 0.0);
-    glRotatef(-azimuth,     0.0, 1.0, 0.0);
 }
-void PilotView(GLfloat roll, GLfloat pitch, GLfloat yaw)
+void DoDisplayGridline()
 {
-    glRotatef(-roll,    0.0, 0.0, 1.0);
-    glRotatef(-pitch,   1.0, 0.0, 0.0);
-    glRotatef(-yaw,     0.0, 1.0, 0.0);
-}
-void DoKeyboard(unsigned char key, int x, int y)
-{
-    switch(key) {
-        case 'a': azimuth   += step; break;
-        case 'd': azimuth   -= step; break;
-        case 'w': elevation += step; break;
-        case 's': elevation -= step; break;
-        case 'q': twist     -= step; break;
-        case 'e': twist     += step; break;
-        case 'z': azimuth = elevation = twist = 0; break;
-        case 'k': changeProjection = !changeProjection; break;
-        case 'n': moveZ += stepMove; break;
-        case 'm': moveZ -= stepMove; break;
-    }
-    if(moveZ == -1.0) moveZ = -1.5;
-    glutPostRedisplay();
-}
-
-void DoReshape(int w, int h)
-{
-    glViewport(0, 0, (GLsizei) w, (GLsizei) h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    if(changeProjection)
-        glOrtho(XcoordinateMin, XcoordinateMax, YcoordinateMin, YcoordinateMax, ZcoordinateMin, ZcoordinateMax);
-    else
-        glFrustum(-1, 1, -1, 1, 1, 15);
-}
-
-int X, Y, ButtonState = 0;
-void DoMouseClick(int button, int state, int x, int y)
-{
-    
-    if(state == GLUT_UP) {
-        switch(button) {
-            case GLUT_LEFT_BUTTON:
-                ButtonState &= ~KIST_LEFT_BUTTON;
-                break;
-            case GLUT_RIGHT_BUTTON:
-                ButtonState &= ~KIST_RIGHT_BUTTON;
-                break;
+    if(!showGridline) return;
+    glLineWidth(3);
+    glBegin(GL_LINES);
+    glColor3f(1,1,1); // X축 Red
+    for(GLfloat i=-2.0; i<=2.0; i+=0.8) {
+        for(GLfloat j=-2.0; j<=2.0; j+=0.8) {
+            glVertex3f(i, j, +50.0);
+            glVertex3f(i, j, -50.0);
+            glVertex3f(i, j, +50.0);
+            glVertex3f(i, j, -50.0);
         }
     }
-    if(state == GLUT_DOWN) {
-        switch(button) {
-            case GLUT_LEFT_BUTTON:
-                ButtonState |= KIST_LEFT_BUTTON;
-                break;
-            case GLUT_RIGHT_BUTTON:
-                ButtonState |= KIST_RIGHT_BUTTON;
-                break;
-        }
-        X = x;
-        Y = y;
-=======
+    glEnd();
+}
+void DoDisplaySample()
+{
+    glGetFloatv(GL_PROJECTION_MATRIX,projectionMatrix);
     for(vector<Face>::iterator it=aFace.begin();it!=aFace.end();++it)
     {
         glBegin(GL_POLYGON);
@@ -268,14 +201,31 @@ void DoMouseClick(int button, int state, int x, int y)
                 Vector3 n(ca.y*ba.z-ba.y*ca.z,ca.z*ba.x-ba.z*ca.x,ca.x*ba.y-ba.x*ca.y);
                 it->normal[i]=n;
             }
-            Vector3 n2(-it->normal[i].x*projectionMatrix[0]-it->normal[i].y*projectionMatrix[4]-it->normal[i].z*projectionMatrix[8],-it->normal[i].x*projectionMatrix[1]-it->normal[i].y*projectionMatrix[5]-it->normal[i].z*projectionMatrix[9],-it->normal[i].x*projectionMatrix[2]-it->normal[i].y*projectionMatrix[6]-it->normal[i].z*projectionMatrix[10]);
+            Vector3 n2(-it->normal[i].x*projectionMatrix[0]-it->normal[i].y*projectionMatrix[4]-it->normal[i].z*projectionMatrix[8]
+                       ,-it->normal[i].x*projectionMatrix[1]-it->normal[i].y*projectionMatrix[5]-it->normal[i].z*projectionMatrix[9]
+                       ,-it->normal[i].x*projectionMatrix[2]-it->normal[i].y*projectionMatrix[6]-it->normal[i].z*projectionMatrix[10]);
             n2=n2/n2.getNorm();
             glNormal3f(n2.x,n2.y,n2.z);
             glVertex3fv(aVertex[it->vertexNo[i]-1]);
         }
         glEnd();
     }
-
+}
+void DoDisplayString()
+{
+    glLoadIdentity();
+    glDisable(GL_LIGHTING);
+    glDisable(GL_LIGHT0);
+    drawBitmapText((char *)"z, gird(l)ine, (m)ode", -1, -0.98, Camera.position.y-1);
+}
+void DoDisplay()
+{
+    DoDisplayInit();
+    DoDisplayMatrix();
+    DoDisplayLightOn();
+    DoDisplayGridline();
+    DoDisplaySample();
+    DoDisplayString();
     glFlush();
 }
 
@@ -314,131 +264,78 @@ void DoMouse(int button,int state,int x,int y)
             buttonState=buttonState&(~button);
             break;
         }
->>>>>>> 1fb0edd54321e4bb67f2a171c309f868fc167f8a
     }
+    glutPostRedisplay();
 }
-<<<<<<< HEAD
-void DoMouseMoving(int x, int y)
-=======
 
 void DoMouseMove(int x,int y)
->>>>>>> 1fb0edd54321e4bb67f2a171c309f868fc167f8a
 {
     switch(buttonState)
     {
-<<<<<<< HEAD
-        case KIST_RIGHT_BUTTON:
-            azimuth     -= +(x - X) * cos(twist * M_PI / 180) + (y - Y) * sin(twist * M_PI / 180);
-            elevation   -= -(x - X) * sin(twist * M_PI / 180) + (y - Y) * cos(twist * M_PI / 180);
-            break;
-        case KIST_LEFT_BUTTON:
-            moveX += (GLfloat)(x - X) / WindowWidth  * 2;
-            moveY -= (GLfloat)(y - Y) / WindowHeight * 2;
-            break;
-        case KIST_BOTH_BUTTON:
-            twist += (x - X);
-            break;
-=======
     case KIST_LEFT_BUTTON:
         translationX=translationX+(x-prvX)*2.0*size/scale/WindowWidth;
         translationY=translationY-(y-prvY)*2.0*size/scale/WindowHeight;
         break;
     case KIST_RIGHT_BUTTON:
-        azimuth=azimuth+(x-prvX)*cos(twist*M_PI/180)-(y-prvY)*sin(twist*M_PI/180);
-        elevation=elevation+(x-prvX)*sin(twist*M_PI/180)+(y-prvY)*cos(twist*M_PI/180);
+        Camera.azimuth  =Camera.azimuth  +1.0*(x-prvX)/WindowWidth *M_PI*cos(Camera.twist*M_PI/180)
+                                         -1.0*(y-prvY)/WindowHeight*M_PI*sin(Camera.twist*M_PI/180);
+        Camera.elevation=Camera.elevation+1.0*(x-prvX)/WindowWidth *M_PI*sin(Camera.twist*M_PI/180)
+                                         +1.0*(y-prvY)/WindowHeight*M_PI*cos(Camera.twist*M_PI/180);
+        
+        Camera.normal = rotateVector(Camera.baseNormal, Camera.baseYAxis, -Camera.azimuth);
+        Camera.xAxis  = rotateVector(Camera.baseXAxis , Camera.baseYAxis, -Camera.azimuth);
+        Camera.normal = rotateVector(Camera.normal    , Camera.xAxis    , -Camera.elevation);
+        Camera.yAxis  = rotateVector(Camera.baseYAxis , Camera.xAxis    , -Camera.elevation);
         break;
     case KIST_BOTH_BUTTON:
         twist=twist+(atan2(-y+WindowHeight/2,x-WindowWidth/2)-atan2(-prvY+WindowHeight/2,prvX-WindowWidth/2))*180/M_PI;
         break;
->>>>>>> 1fb0edd54321e4bb67f2a171c309f868fc167f8a
     }
     prvX=x;
     prvY=y;
     glutPostRedisplay();
 }
-
-<<<<<<< HEAD
-
-void DisplayInit()
+void DoMousePassiveMove(int x, int y)
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW);
-}
-
-void InitLight()
-{
-//    glShadeModel(GL_FLAT);
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_DEPTH_TEST);
-    
-    GLfloat mat_diffuse[]   = {0.5, 0.4, 0.3, 1.0};
-    GLfloat mat_specular[]  = {1.0, 1.0, 1.0, 1.0};
-    GLfloat mat_ambient[]   = {0.5, 0.4, 0.3, 1.0};
-    GLfloat mat_shininess[]  = {15.0};
-    GLfloat light_specular[]  = {1.0, 1.0, 1.0, 1.0};
-    GLfloat light_diffuse[]   = {0.8, 0.8, 0.8, 1.0};
-    GLfloat light_ambient[]   = {0.3, 0.3, 0.3, 1.0};
-    GLfloat light_position[]  = {-3, 5, 3.0, 0.0};
-    
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE , light_diffuse );
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-    glLightfv(GL_LIGHT0, GL_AMBIENT , light_ambient );
-    
-    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-    glMaterialfv(GL_FRONT, GL_DIFFUSE  , mat_diffuse  );
-    glMaterialfv(GL_FRONT, GL_SPECULAR , mat_specular );
-    glMaterialfv(GL_FRONT, GL_AMBIENT  , mat_ambient  );
-    
-}
-
-void DoDisplay()
-{
-    DisplayInit();
-    
-    glLoadIdentity();
-    glLineWidth(3);
-    glBegin(GL_LINES);
-    glColor3f(1,1,1); // X축 Red
-    for(GLfloat i=-2.0; i<=2.0; i+=0.2)
-    {
-        glVertex3f(+i, -1.0, -1.0);
-        glVertex3f(+i, -1.0, -50.0);
-        glVertex3f(+i, +1.0, -1.0);
-        glVertex3f(+i, +1.0, -50.0);
+    if(mode == KIST_SELECT_MODE) {
+        prvX=x;
+        prvY=y;
+        return;
     }
-    glEnd();
-
-    PolarView(+2, elevation, azimuth, twist);
-    glutSolidTeapot(0.3);
-    glFlush();
+    if(x < 10 || y < 10 || x > WindowWidth-10 || y > WindowHeight-10)
+    {
+        glutWarpPointer(WindowWidth/2, WindowHeight/2);
+        prvX = WindowWidth / 2;
+        prvY = WindowHeight / 2;
+    }
+    else
+    {
+        Camera.azimuth  =Camera.azimuth  +1.0*(x-prvX)/WindowWidth *M_PI*cos(Camera.twist*M_PI/180)
+        -1.0*(y-prvY)/WindowHeight*M_PI*sin(Camera.twist*M_PI/180);
+        Camera.elevation=Camera.elevation+1.0*(x-prvX)/WindowWidth *M_PI*sin(Camera.twist*M_PI/180)
+        +1.0*(y-prvY)/WindowHeight*M_PI*cos(Camera.twist*M_PI/180);
+        
+        Camera.normal = rotateVector(Camera.baseNormal, Camera.baseYAxis, -Camera.azimuth);
+        Camera.xAxis  = rotateVector(Camera.baseXAxis , Camera.baseYAxis, -Camera.azimuth);
+        Camera.normal = rotateVector(Camera.normal    , Camera.xAxis    , -Camera.elevation);
+        Camera.yAxis  = rotateVector(Camera.baseYAxis , Camera.xAxis    , -Camera.elevation);
+        prvX=x;
+        prvY=y;
+    }
+    
+    glutPostRedisplay();
 }
 
+void DoKeyboardUp(unsigned char key, int x, int y) {
+    isPress[(int)key] = false;
+}
 
-
-int main(int argc, char *argv[])
-{
-#ifdef __APPLE__
-    glutInit(&argc, argv);
-#else
-    glutInit(&__argc,__argv);
-#endif
-    
-    
-    glutInitWindowSize      (WindowWidth    , WindowHeight   );
-    glutInitWindowPosition  (WindowPositionX, WindowPositionY);
-    glutCreateWindow("KJBS2");
-    
-    InitLight();
-    glutDisplayFunc (DoDisplay );
-    glutReshapeFunc (DoReshape );
-=======
 void DoKeyboard(unsigned char key,int x,int y)
 {
+    isPress[(int)key] = true;
     switch(key)
     {
+    /*
     case 'a':
         azimuth=azimuth-angleStep;
         break;
@@ -457,6 +354,7 @@ void DoKeyboard(unsigned char key,int x,int y)
     case 'e':
         twist=twist-angleStep;
         break;
+    */
     case 'x':
         translationZ=translationZ-translationStep*size;
         break;
@@ -466,8 +364,28 @@ void DoKeyboard(unsigned char key,int x,int y)
     case 'z':
         initialize();
         break;
+    case 'g':
+        debug = !debug;
+        break;
+    case 'l':
+        showGridline = !showGridline;
+        break;
+    case 'p':
+        Camera.position.z += 1;
+        break;
     case ' ':
         DoLoad();
+        break;
+    case 'm':
+        if(mode == KIST_SELECT_MODE)
+        {
+            mode = KIST_CAMERA_MODE;
+            glutSetCursor(GLUT_CURSOR_NONE); // 커서를 가린다.
+        }else if(mode == KIST_CAMERA_MODE)
+        {
+            mode = KIST_SELECT_MODE;
+            glutSetCursor(GLUT_CURSOR_INHERIT);
+        }
         break;
     }
     glutPostRedisplay();
@@ -475,6 +393,8 @@ void DoKeyboard(unsigned char key,int x,int y)
 
 void DoSpecial(int key,int x,int y)
 {
+//    isPress[key + 256] = true;
+    printf("SPECIAL %d\n", key);
     switch(key)
     {
     case GLUT_KEY_LEFT:
@@ -509,14 +429,19 @@ int main(int argc,char *argv[])
     glutReshapeFunc(DoReshape);
     glutMouseFunc(DoMouse);
     glutMotionFunc(DoMouseMove);
->>>>>>> 1fb0edd54321e4bb67f2a171c309f868fc167f8a
+    glutPassiveMotionFunc(DoMousePassiveMove);
     glutKeyboardFunc(DoKeyboard);
-    glutMouseFunc   (DoMouseClick);
-    glutMotionFunc  (DoMouseMoving);
-    glutMainLoop();
+    glutKeyboardUpFunc(DoKeyboardUp);
+    glutSpecialFunc(DoSpecial);
+    glutIdleFunc(DoIdle);
+#ifdef __APPLE__
+    CGSetLocalEventsSuppressionInterval(0.0);
+    // OS X 에서 기본 설정이 0.25라서 끊기는 현상이 발생하는 것을 방지.
+    // http://goo.gl/7Zxkmp
+#endif
+    glutSetCursor(GLUT_CURSOR_NONE); // 커서를 가린다.
     
+    glutMainLoop();
+
     return EXIT_SUCCESS;
 }
-
-    
-    
