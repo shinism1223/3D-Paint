@@ -21,7 +21,6 @@ TBBUTTON ToolBtn[5]={ // 툴바 설정.
 
 LRESULT CALLBACK WndProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lParam) // 윈도우 프로시져
 {
-    int a;
     switch(iMessage)
     {
     case WM_CREATE:
@@ -64,7 +63,7 @@ ChildWindow* MainWindow::get_child_window()
 {
     return child;
 }
-MainWindow::MainWindow(HINSTANCE hInstance,LPSTR lpszClassName,const int menu)
+MainWindow::MainWindow(HINSTANCE hInstance,const LPSTR lpszClassName,const int menu)
 {
     hinst=hInstance;
     win.cbClsExtra=0;
